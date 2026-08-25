@@ -1,9 +1,30 @@
 (function () {
   'use strict';
 
+  // === Self-reload if server has been updated since this script was loaded ===
+  // Prevents the "I clicked but nothing happens" failure mode where the user's
+  // browser has a stale app.js that no longer matches the server logic.
+  fetch('/api/version', { cache: 'no-store' })
+    .then((r) => r.json())
+    .then((d) => {
+      const scriptUrl = document.currentScript ? document.currentScript.src : '';
+      const m = scriptUrl.match(/[?&]v=(\d+)/);
+      const loadedVersion = m ? Number(m[1]) : 0;
+      if (loadedVersion !== Number(d.version)) {
+        // hard reload bypassing cache
+        const u = new URL(location.href);
+        u.searchParams.set('v', d.version);
+        location.replace(u.toString());
+      }
+    })
+    .catch(() => { /* ignore — offline or dev */ });
+
   const $ = (id) => document.getElementById(id);
   const els = {
     connectionStatus: $('connection-status'),
+    roleBadge: $('role-badge'),
+    roleBanner: $('role-banner'),
+    roleBannerText: $('role-banner-text'),
     nowPlayingTitle: $('now-playing-title'),
     nowPlayingStatus: $('now-playing-status'),
     hostControls: $('host-controls'),
@@ -79,6 +100,9 @@
   // === Socket.IO ===
   const socket = io();
 
+  // initial badge render so role is visible immediately
+  renderRole(false);
+
   socket.on('connect', () => {
     els.connectionStatus.textContent = 'Connected';
     els.connectionStatus.className = 'status connected';
@@ -128,7 +152,7 @@
     state.queue = snapshot.queue || [];
     state.current = snapshot.current;
     document.body.classList.toggle('is-host', state.isHost);
-    renderHostSection(snapshot.hostConnected);
+    renderRole(snapshot.hostConnected);
     renderQueue();
     renderNowPlaying();
     // sync host player if reconnecting with a song already in progress
@@ -139,21 +163,44 @@
     }
   }
 
-  function renderHostSection(serverHostConnected) {
+  function renderRole(serverHostConnected) {
+    // === header badge ===
+    els.roleBadge.classList.remove('role-host', 'role-listener');
     if (state.isHost) {
-      // we're authenticated host: show actions, hide login form
+      els.roleBadge.classList.add('role-host');
+      els.roleBadge.textContent = '🎵 HOST';
+    } else {
+      els.roleBadge.classList.add('role-listener');
+      els.roleBadge.textContent = 'Listener';
+    }
+
+    // === role banner ===
+    els.roleBanner.classList.remove('role-listener', 'role-host', 'role-other-host');
+    if (state.isHost) {
+      els.roleBanner.classList.add('role-host');
+      els.roleBannerText.textContent = '🎵 You are the HOST. Audio plays from this tab — keep it open.';
+      els.roleBanner.classList.remove('hidden');
+    } else if (serverHostConnected) {
+      els.roleBanner.classList.add('role-other-host');
+      els.roleBannerText.textContent = '🔵 Another host is playing audio. You can only listen & add songs.';
+      els.roleBanner.classList.remove('hidden');
+    } else {
+      els.roleBanner.classList.add('role-listener');
+      els.roleBannerText.textContent = '👤 You are a listener. Log in as host below to control playback.';
+      els.roleBanner.classList.remove('hidden');
+    }
+
+    // === host card ===
+    if (state.isHost) {
       els.hostLoginForm.classList.add('hidden');
       els.hostActions.classList.remove('hidden');
       els.hostStatus.textContent = 'Authenticated';
     } else {
-      // not authenticated as host
       els.hostActions.classList.add('hidden');
       if (serverHostConnected) {
-        // another host is already playing: hide login form, show status
         els.hostLoginForm.classList.add('hidden');
-        els.hostStatus.textContent = 'Host is playing';
+        els.hostStatus.textContent = 'Another host is already playing';
       } else {
-        // no host yet: show login form
         els.hostLoginForm.classList.remove('hidden');
         els.hostStatus.textContent = 'Not authenticated';
       }
@@ -190,7 +237,10 @@
         const btn = document.createElement('button');
         btn.className = 'queue-remove host-only';
         btn.textContent = 'Remove';
-        btn.addEventListener('click', () => socket.emit('queue:remove', { id: item.id }));
+        btn.addEventListener('click', (e) => {
+          flash(e.currentTarget);
+          socket.emit('queue:remove', { id: item.id });
+        });
         li.appendChild(btn);
       }
       els.queueList.appendChild(li);
@@ -218,6 +268,7 @@
     });
     if (!res.ok) {
       els.hostStatus.textContent = 'Wrong password';
+      console.warn('[host] login failed');
       return;
     }
     const { token } = await res.json();
@@ -225,26 +276,34 @@
     state.isHost = true;
     els.hostPassword.value = '';
     document.body.classList.add('is-host');
-    renderHostSection(true);
+    renderRole(true);
     renderQueue();
     // reconnect socket with token
     socket.disconnect();
     socket.io.opts.auth = { token };
     socket.connect();
+    console.info('[host] logged in, socket reconnecting with token');
     // player will be initialized when state:sync arrives with a current song
     if (state.ytReady && state.current && state.current.videoId) {
       ensureHostPlayer(state.current.videoId);
     }
   });
 
-  els.btnSkip.addEventListener('click', () => {
+  els.btnSkip.addEventListener('click', (e) => {
     if (!state.isHost) return;
+    flash(e.currentTarget);
     socket.emit('player:skip');
   });
 
-  els.btnClear.addEventListener('click', () => {
+  els.btnClear.addEventListener('click', (e) => {
     if (!state.isHost) return;
     if (!confirm('Clear entire queue?')) return;
+    flash(e.currentTarget);
     socket.emit('queue:clear');
   });
+
+  function flash(btn) {
+    btn.classList.add('clicked');
+    setTimeout(() => btn.classList.remove('clicked'), 200);
+  }
 })();

@@ -10,8 +10,15 @@
   <div id="app">
     <header>
       <h1>listen_2gth</h1>
-      <div id="connection-status" class="status connecting">Connecting…</div>
+      <div class="header-right">
+        <div id="role-badge" class="role-badge role-listener">Listener</div>
+        <div id="connection-status" class="status connecting">Connecting…</div>
+      </div>
     </header>
+
+    <div id="role-banner" class="role-banner role-listener hidden">
+      <span id="role-banner-text">You are a listener — only the host can skip or remove songs.</span>
+    </div>
 
     <section id="now-playing" class="card">
       <div class="label">Now Playing</div>
@@ -50,6 +57,6 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="/app.js?v=4"></script>
+  <script src="/app.js?v=6"></script>
 </body>
 </html>

@@ -70,6 +70,7 @@ button {
   font-size: 14px;
 }
 button:hover { background: #2563eb; }
+button.clicked { transform: scale(0.95); filter: brightness(1.4); }
 #host-actions {
   display: flex;
   gap: 8px;
@@ -114,6 +115,55 @@ button:hover { background: #2563eb; }
 .host-only { display: none; }
 body.is-host .host-only { display: inline-block; }
 .hidden { display: none !important; }
+
+/* === Role indicator === */
+.header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.role-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 12px;
+  letter-spacing: 0.5px;
+}
+.role-badge.role-listener {
+  background: #334155;
+  color: #cbd5e1;
+}
+.role-badge.role-host {
+  background: #f59e0b;
+  color: #000;
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+}
+.role-banner {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+.role-banner.role-listener {
+  background: #1e3a8a;
+  color: #dbeafe;
+  border: 1px solid #3b82f6;
+}
+.role-banner.role-host {
+  background: #78350f;
+  color: #fef3c7;
+  border: 1px solid #f59e0b;
+}
+/* When host is connected and I'm NOT host: add a hint banner */
+.role-banner.role-other-host {
+  background: #1e3a8a;
+  color: #dbeafe;
+  border: 1px solid #3b82f6;
+}
 @media (max-width: 480px) {
   h1 { font-size: 20px; }
   .card { padding: 12px; }

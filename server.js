@@ -14,9 +14,18 @@ export async function startServer() {
 
   const app = express();
   app.use(express.json());
-  app.use(express.static(path.join(__dirname, 'public')));
+  app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res, filePath) => {
+      // never cache frontend files so updates are picked up immediately
+      res.setHeader('Cache-Control', 'no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+    },
+  }));
 
   app.get('/api/state', (_req, res) => res.json(queue.getSnapshot()));
+
+app.get('/api/version', (_req, res) => res.json({ version: '6' }));
 
   app.post('/api/host/login', (req, res) => {
     const result = auth.login(req.body?.password);
@@ -81,6 +90,11 @@ export async function startServer() {
         const hostsRemaining = [...io.sockets.sockets.values()].filter((s) => isHostSocket(s));
         if (hostsRemaining.length === 0) queue.setHostConnected(false);
       });
+      // auto-resume: if queue has items but nothing is playing, start the head
+      const snap = queue.getSnapshot();
+      if (!snap.current && snap.queue.length > 0) {
+        queue.next().catch((err) => console.error('auto-resume failed', err));
+      }
     }
 
     // Send initial snapshot to the connecting socket. For hosts, this
