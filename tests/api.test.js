@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { startServer } from '../server.js';
 import * as queue from '../src/queue.js';
+import { io as ioClient } from 'socket.io-client';
 
 const TEST_DIR = path.join(process.cwd(), 'tests', 'tmp-api');
 let server, baseUrl;
@@ -131,4 +132,63 @@ test('DELETE /api/queue clears all', async () => {
   assert.strictEqual(status, 204);
   const { body: state } = await request('GET', '/api/state');
   assert.strictEqual(state.queue.length, 0);
+});
+
+test('WebSocket: user can add via queue:add, receives queue:update', async () => {
+  const user = ioClient(baseUrl);
+  await new Promise((r) => user.on('connect', r));
+  const update = await new Promise((resolve) => {
+    user.on('queue:update', resolve);
+    user.emit('queue:add', { youtubeUrl: 'https://youtu.be/dQw4w9WgXcQ' });
+  });
+  assert.strictEqual(update.queue.length, 1);
+  assert.strictEqual(update.queue[0].videoId, 'dQw4w9WgXcQ');
+  user.disconnect();
+});
+
+test('WebSocket: non-host cannot emit player:play', async () => {
+  const user = ioClient(baseUrl);
+  await new Promise((r) => user.on('connect', r));
+  const statePromise = new Promise((resolve) => {
+    user.on('player:state', resolve);
+    user.emit('player:play', { videoId: 'dQw4w9WgXcQ' });
+    setTimeout(resolve, 500); // resolve with null if no event
+  });
+  const result = await statePromise;
+  assert.strictEqual(result ?? null, null); // server should NOT broadcast
+  user.disconnect();
+});
+
+test('WebSocket: host can emit player:play, all clients receive player:state', async () => {
+  const { body: loginBody } = await request('POST', '/api/host/login', { body: { password: 'secret123' } });
+  const token = loginBody.token;
+
+  const user = ioClient(baseUrl);
+  await new Promise((r) => user.on('connect', r));
+
+  const statePromise = new Promise((resolve) => {
+    user.on('player:state', resolve);
+    // host emits play (server checks token from socket handshake auth)
+  });
+
+  // We need to register the host socket with the token. Simplest: emit from a host socket.
+  const host = ioClient(baseUrl, { auth: { token } });
+  await new Promise((r) => host.on('connect', r));
+
+  host.emit('player:play', { videoId: 'dQw4w9WgXcQ', title: 'Test Song' });
+  const state = await statePromise;
+  assert.strictEqual(state.videoId, 'dQw4w9WgXcQ');
+  assert.ok(state.startedAt);
+  user.disconnect();
+  host.disconnect();
+});
+
+test('WebSocket: state:sync sent on connect', async () => {
+  const user = ioClient(baseUrl);
+  const sync = await new Promise((resolve) => {
+    user.on('state:sync', resolve);
+  });
+  assert.ok(Array.isArray(sync.queue));
+  assert.strictEqual(typeof sync.hostConnected, 'boolean');
+  user.disconnect();
 });
