@@ -192,18 +192,18 @@
 
     // === host card ===
     if (state.isHost) {
+      els.hostControls.classList.remove('hidden');
       els.hostLoginForm.classList.add('hidden');
       els.hostActions.classList.remove('hidden');
       els.hostStatus.textContent = 'Authenticated';
+    } else if (serverHostConnected) {
+      // another host is playing — hide the entire host card from guests
+      els.hostControls.classList.add('hidden');
     } else {
+      els.hostControls.classList.remove('hidden');
       els.hostActions.classList.add('hidden');
-      if (serverHostConnected) {
-        els.hostLoginForm.classList.add('hidden');
-        els.hostStatus.textContent = 'Another host is already playing';
-      } else {
-        els.hostLoginForm.classList.remove('hidden');
-        els.hostStatus.textContent = 'Not authenticated';
-      }
+      els.hostLoginForm.classList.remove('hidden');
+      els.hostStatus.textContent = 'Not authenticated';
     }
   }
 
