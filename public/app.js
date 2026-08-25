@@ -226,7 +226,9 @@
   socket.on('error', ({ event, error }) => {
     if (event === 'queue:add') {
       els.addError.textContent = error || 'Failed to add';
-      setTimeout(() => { els.addError.textContent = ''; }, 3000);
+      // longer timeout for rate-limit messages
+      const isRateLimit = error && /too many/i.test(error);
+      setTimeout(() => { els.addError.textContent = ''; }, isRateLimit ? 5000 : 3000);
     }
   });
 

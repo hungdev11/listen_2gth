@@ -5,6 +5,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { startServer } from '../server.js';
 import * as queue from '../src/queue.js';
+import * as ratelimit from '../src/ratelimit.js';
 import { io as ioClient } from 'socket.io-client';
 
 const TEST_DIR = path.join(process.cwd(), 'tests', 'tmp-api');
@@ -37,6 +38,7 @@ test.beforeEach(async () => {
     return originalFetch(url, opts);
   };
   await queue.init();
+  ratelimit._resetForTests();
 });
 
 test.afterEach(() => {
@@ -247,4 +249,31 @@ test('WebSocket: host can emit player:stop to clear current without affecting qu
   assert.strictEqual(snap.body.current, null);
   assert.ok(Array.isArray(snap.body.queue));
   host.disconnect();
+});
+
+test('WebSocket: queue:add is rate-limited (5 requests / minute)', async () => {
+  const user = ioClient(baseUrl);
+  await new Promise((r) => user.on('connect', r));
+
+  // use invalid URLs so we don't trigger oEmbed fetches (those would also
+  // race the assertions). rate limit fires BEFORE queue.addYoutubeUrl, so
+  // invalid URL is fine for the 5 allowed ones too.
+  let rateLimitSeen = false;
+  const errors = [];
+  user.on('error', (e) => {
+    errors.push(e);
+    if (e && e.event === 'queue:add' && /too many/i.test(e.error || '')) {
+      rateLimitSeen = true;
+    }
+  });
+
+  for (let i = 0; i < 6; i++) {
+    user.emit('queue:add', { youtubeUrl: 'not-a-youtube-url' });
+  }
+
+  // wait briefly for all responses
+  await new Promise((r) => setTimeout(r, 500));
+
+  assert.strictEqual(rateLimitSeen, true, '6th request should be rate-limited');
+  user.disconnect();
 });

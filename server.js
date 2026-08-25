@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { Server as IOServer } from 'socket.io';
 import * as auth from './src/auth.js';
 import * as queue from './src/queue.js';
+import * as ratelimit from './src/ratelimit.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -13,6 +14,10 @@ export async function startServer() {
   await queue.init();
 
   const app = express();
+  // trust the first proxy when running behind a reverse proxy (LAN deploys
+  // sometimes put nginx in front). With trust proxy = 1, req.ip respects
+  // X-Forwarded-For. For a bare node server this is harmless.
+  app.set('trust proxy', 1);
   app.use(express.json());
   app.use(express.static(path.join(__dirname, 'public'), {
     setHeaders: (res, filePath) => {
@@ -25,7 +30,7 @@ export async function startServer() {
 
   app.get('/api/state', (_req, res) => res.json(queue.getSnapshot()));
 
-app.get('/api/version', (_req, res) => res.json({ version: '11' }));
+app.get('/api/version', (_req, res) => res.json({ version: '12' }));
 
   app.post('/api/host/login', (req, res) => {
     const result = auth.login(req.body?.password);
@@ -41,6 +46,11 @@ app.get('/api/version', (_req, res) => res.json({ version: '11' }));
   }
 
   app.post('/api/queue', requireHost, async (req, res) => {
+    const rl = ratelimit.hit(`queue-add:${req.ip}`, 5, 60_000);
+    if (!rl.ok) {
+      res.setHeader('Retry-After', String(Math.ceil(rl.retryAfterMs / 1000)));
+      return res.status(429).json({ error: `Too many requests. Try again in ${Math.ceil(rl.retryAfterMs / 1000)}s.` });
+    }
     const result = await queue.addYoutubeUrl(req.body?.youtubeUrl);
     if (!result.ok) return res.status(400).json({ error: result.error });
     // auto-play if nothing is currently playing
@@ -110,6 +120,15 @@ app.get('/api/version', (_req, res) => res.json({ version: '11' }));
 
     // === queue events ===
     socket.on('queue:add', async ({ youtubeUrl } = {}) => {
+      const ip = socket.handshake.address || 'unknown';
+      const rl = ratelimit.hit(`queue-add:${ip}`, 5, 60_000);
+      if (!rl.ok) {
+        socket.emit('error', {
+          event: 'queue:add',
+          error: `Too many requests. Try again in ${Math.ceil(rl.retryAfterMs / 1000)}s.`,
+        });
+        return;
+      }
       const result = await queue.addYoutubeUrl(youtubeUrl);
       if (!result.ok) socket.emit('error', { event: 'queue:add', error: result.error });
       // auto-play: if nothing is playing and a host is connected, start the head
