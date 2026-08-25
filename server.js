@@ -60,7 +60,7 @@ export async function startServer() {
   });
 
   const server = http.createServer(app);
-  const port = Number(process.env.PORT) || 3000;
+  const port = process.env.PORT !== undefined ? Number(process.env.PORT) : 3000;
   await new Promise((resolve) => server.listen(port, resolve));
   return server;
 }
