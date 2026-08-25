@@ -59,6 +59,7 @@ export async function startServer() {
 
   // Queue change notifications
   queue.subscribe((snapshot) => {
+    io.emit('state:sync', snapshot);
     io.emit('queue:update', { queue: snapshot.queue });
     io.emit('player:state', snapshot.current ? {
       videoId: snapshot.current.videoId,
@@ -68,8 +69,6 @@ export async function startServer() {
   });
 
   io.on('connection', (socket) => {
-    socket.emit('state:sync', queue.getSnapshot());
-
     if (isHostSocket(socket)) {
       queue.setHostConnected(true);
       socket.on('disconnect', () => {
@@ -78,6 +77,11 @@ export async function startServer() {
         if (hostsRemaining.length === 0) queue.setHostConnected(false);
       });
     }
+
+    // Send initial snapshot to the connecting socket. For hosts, this
+    // reflects hostConnected=true (because setHostConnected above triggered
+    // notify() with the fresh snapshot).
+    socket.emit('state:sync', queue.getSnapshot());
 
     // === queue events ===
     socket.on('queue:add', async ({ youtubeUrl } = {}) => {
