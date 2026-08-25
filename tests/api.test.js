@@ -167,7 +167,7 @@ test('WebSocket: host can emit player:play, all clients receive player:state', a
   await new Promise((r) => user.on('connect', r));
 
   const statePromise = new Promise((resolve) => {
-    user.on('player:state', resolve);
+    user.on('player:state', (s) => { if (s) resolve(s); });
     // host emits play (server checks token from socket handshake auth)
   });
 
