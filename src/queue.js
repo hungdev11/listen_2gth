@@ -112,10 +112,18 @@ export async function clearCurrent() {
   notify();
 }
 
-export async function setCurrent({ videoId, title, startedAt }) {
+export async function setCurrent({ videoId, title, startedAt, duration }) {
   ensureInit();
-  cache.current = { videoId, title, startedAt: startedAt ?? Date.now() };
+  cache.current = { videoId, title, startedAt: startedAt ?? Date.now(), duration: duration ?? null };
   await persist();
+  notify();
+}
+
+export function setCurrentDuration(duration) {
+  ensureInit();
+  if (!cache.current) return;
+  cache.current.duration = duration;
+  // duration changes are ephemeral — don't persist on every update
   notify();
 }
 

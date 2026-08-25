@@ -130,6 +130,9 @@
         events: {
           onReady: () => {
             state.ytPlayer.playVideo();
+            // YT loads duration metadata after the video starts buffering.
+            // Poll a few times to capture it then notify server.
+            captureDuration();
           },
           onError: (e) => {
             console.error('[player] YT error', e);
@@ -137,6 +140,10 @@
           onStateChange: (e) => {
             if (e.data === YT.PlayerState.ENDED) {
               socket.emit('player:ended');
+            }
+            // onStateChange fires when buffering finishes — re-check duration
+            if (e.data === YT.PlayerState.PLAYING) {
+              captureDuration();
             }
           },
         },
@@ -148,7 +155,29 @@
     if (!url || !url.includes(videoId)) {
       state.ytPlayer.loadVideoById(videoId);
       state.ytPlayer.playVideo();
+      // new video — capture its duration once available
+      captureDuration();
     }
+  }
+
+  // Poll YT for the current video's duration and send it to the server.
+  // YT.Player.getDuration() returns 0 until metadata is loaded; we re-check
+  // every second for up to ~10s, then stop.
+  let _durationAttempts = 0;
+  function captureDuration() {
+    if (!state.isHost || !state.ytPlayer) return;
+    _durationAttempts = 0;
+    const tryOnce = () => {
+      if (!state.ytPlayer || !state.ytPlayer.getDuration) return;
+      const d = state.ytPlayer.getDuration();
+      if (d > 0) {
+        socket.emit('player:duration', { duration: d });
+        return;
+      }
+      _durationAttempts++;
+      if (_durationAttempts < 10) setTimeout(tryOnce, 1000);
+    };
+    tryOnce();
   }
 
   // === Socket.IO ===
@@ -268,13 +297,27 @@
       return;
     }
     els.nowPlayingTitle.textContent = state.current.title || state.current.videoId;
-    const elapsed = Math.max(0, Math.floor((Date.now() - state.current.startedAt) / 1000));
+    const startedAt = state.current.startedAt || Date.now();
+    const duration = state.current.duration; // seconds, may be null
+    const elapsed = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
     const m = Math.floor(elapsed / 60);
     const s = elapsed % 60;
-    els.nowPlayingStatus.textContent = `Started ${m}:${String(s).padStart(2, '0')} ago`;
+    const ago = `Started ${m}:${String(s).padStart(2, '0')} ago`;
+
+    if (duration && duration > 0) {
+      const remaining = Math.max(0, duration - elapsed);
+      const rm = Math.floor(remaining / 60);
+      const rs = remaining % 60;
+      const endsAt = new Date(Date.now() + remaining * 1000);
+      const hh = String(endsAt.getHours()).padStart(2, '0');
+      const mm = String(endsAt.getMinutes()).padStart(2, '0');
+      els.nowPlayingStatus.textContent = `${ago} · ends in ${rm}:${String(rs).padStart(2, '0')} (${hh}:${mm})`;
+    } else {
+      els.nowPlayingStatus.textContent = ago;
+    }
   }
 
-  // re-render "x ago" every second
+  // re-render countdown every second
   setInterval(() => { if (state.current) renderNowPlaying(); }, 1000);
 
   function renderQueue() {

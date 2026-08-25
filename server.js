@@ -25,7 +25,7 @@ export async function startServer() {
 
   app.get('/api/state', (_req, res) => res.json(queue.getSnapshot()));
 
-app.get('/api/version', (_req, res) => res.json({ version: '10' }));
+app.get('/api/version', (_req, res) => res.json({ version: '11' }));
 
   app.post('/api/host/login', (req, res) => {
     const result = auth.login(req.body?.password);
@@ -84,6 +84,7 @@ app.get('/api/version', (_req, res) => res.json({ version: '10' }));
       videoId: snapshot.current.videoId,
       title: snapshot.current.title,
       startedAt: snapshot.current.startedAt,
+      duration: snapshot.current.duration ?? null,
     } : null);
   });
 
@@ -152,6 +153,12 @@ app.get('/api/version', (_req, res) => res.json({ version: '10' }));
     socket.on('player:stop', async () => {
       if (!isHostSocket(socket)) return;
       await queue.clearCurrent();
+    });
+
+    socket.on('player:duration', ({ duration } = {}) => {
+      if (!isHostSocket(socket)) return;
+      if (typeof duration !== 'number' || duration <= 0) return;
+      queue.setCurrentDuration(duration);
     });
 
     socket.on('player:ended', async () => {

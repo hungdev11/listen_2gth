@@ -193,6 +193,31 @@ test('WebSocket: state:sync sent on connect', async () => {
   user.disconnect();
 });
 
+test('WebSocket: host can emit player:duration to broadcast end time', async () => {
+  const { body: loginBody } = await request('POST', '/api/host/login', { body: { password: 'secret123' } });
+  const token = loginBody.token;
+
+  const host = ioClient(baseUrl, { auth: { token } });
+  await new Promise((r) => host.on('connect', r));
+
+  // set current via player:play
+  await new Promise((resolve) => {
+    host.on('player:state', (s) => { if (s) resolve(); });
+    host.emit('player:play', { videoId: 'dQw4w9WgXcQ', title: 'Test' });
+  });
+
+  // now send duration
+  const durationPromise = new Promise((resolve) => {
+    host.on('player:state', (s) => { if (s && s.duration === 213) resolve(); });
+  });
+  host.emit('player:duration', { duration: 213 });
+  await durationPromise;
+
+  const snap = await request('GET', '/api/state');
+  assert.strictEqual(snap.body.current.duration, 213);
+  host.disconnect();
+});
+
 test('WebSocket: host can emit player:stop to clear current without affecting queue', async () => {
   const { body: loginBody } = await request('POST', '/api/host/login', { body: { password: 'secret123' } });
   const token = loginBody.token;
