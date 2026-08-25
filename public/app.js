@@ -111,8 +111,30 @@
     state.queue = snapshot.queue || [];
     state.current = snapshot.current;
     document.body.classList.toggle('is-host', state.isHost);
+    renderHostSection(snapshot.hostConnected);
     renderQueue();
     renderNowPlaying();
+  }
+
+  function renderHostSection(serverHostConnected) {
+    if (state.isHost) {
+      // we're authenticated host: show actions, hide login form
+      els.hostLoginForm.classList.add('hidden');
+      els.hostActions.classList.remove('hidden');
+      els.hostStatus.textContent = 'Authenticated';
+    } else {
+      // not authenticated as host
+      els.hostActions.classList.add('hidden');
+      if (serverHostConnected) {
+        // another host is already playing: hide login form, show status
+        els.hostLoginForm.classList.add('hidden');
+        els.hostStatus.textContent = 'Host is playing';
+      } else {
+        // no host yet: show login form
+        els.hostLoginForm.classList.remove('hidden');
+        els.hostStatus.textContent = 'Not authenticated';
+      }
+    }
   }
 
   function renderNowPlaying() {
@@ -178,10 +200,9 @@
     const { token } = await res.json();
     state.hostToken = token;
     state.isHost = true;
-    els.hostStatus.textContent = 'Authenticated';
-    els.hostLoginForm.classList.add('hidden');
-    els.hostActions.classList.remove('hidden');
+    els.hostPassword.value = '';
     document.body.classList.add('is-host');
+    renderHostSection(true);
     renderQueue();
     // reconnect socket with token
     socket.disconnect();
