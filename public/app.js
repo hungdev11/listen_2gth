@@ -278,9 +278,13 @@
     document.body.classList.add('is-host');
     renderRole(true);
     renderQueue();
-    // reconnect socket with token
-    socket.disconnect();
-    socket.io.opts.auth = { token };
+    // reconnect socket with token. In socket.io-client v4 the auth payload
+    // must be set on `socket.auth` (the Manager reads this on each connect).
+    // Setting `socket.io.opts.auth` after disconnect is unreliable.
+    socket.auth = { token };
+    if (socket.connected) {
+      socket.disconnect();
+    }
     socket.connect();
     console.info('[host] logged in, socket reconnecting with token');
     // player will be initialized when state:sync arrives with a current song
