@@ -33,6 +33,7 @@
     hostPassword: $('host-password'),
     hostActions: $('host-actions'),
     btnSkip: $('btn-skip'),
+    btnStop: $('btn-stop'),
     btnClear: $('btn-clear'),
     playerContainer: $('player-container'),
     addForm: $('add-form'),
@@ -359,6 +360,12 @@
     if (!state.isHost) return;
     flash(e.currentTarget);
     socket.emit('player:skip');
+  });
+
+  els.btnStop.addEventListener('click', (e) => {
+    if (!state.isHost) return;
+    flash(e.currentTarget);
+    socket.emit('player:stop');
   });
 
   els.btnClear.addEventListener('click', (e) => {

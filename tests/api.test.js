@@ -192,3 +192,34 @@ test('WebSocket: state:sync sent on connect', async () => {
   assert.strictEqual(typeof sync.hostConnected, 'boolean');
   user.disconnect();
 });
+
+test('WebSocket: host can emit player:stop to clear current without affecting queue', async () => {
+  const { body: loginBody } = await request('POST', '/api/host/login', { body: { password: 'secret123' } });
+  const token = loginBody.token;
+
+  // pre-populate queue + current via REST
+  await request('POST', '/api/queue', {
+    body: { youtubeUrl: 'https://www.youtube.com/watch?v=AAAAAAAAAAA' },
+    token,
+  });
+
+  const host = ioClient(baseUrl, { auth: { token } });
+  await new Promise((r) => host.on('connect', r));
+
+  // wait for current to exist (auto-played after add)
+  await new Promise((resolve) => {
+    host.on('player:state', (s) => { if (s) resolve(); });
+  });
+
+  // now stop — current should become null but queue stays
+  const stopPromise = new Promise((resolve) => {
+    host.on('player:state', (s) => { if (s === null) resolve(); });
+  });
+  host.emit('player:stop');
+  await stopPromise;
+
+  const snap = await request('GET', '/api/state');
+  assert.strictEqual(snap.body.current, null);
+  assert.ok(Array.isArray(snap.body.queue));
+  host.disconnect();
+});

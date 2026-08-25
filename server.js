@@ -25,7 +25,7 @@ export async function startServer() {
 
   app.get('/api/state', (_req, res) => res.json(queue.getSnapshot()));
 
-app.get('/api/version', (_req, res) => res.json({ version: '9' }));
+app.get('/api/version', (_req, res) => res.json({ version: '10' }));
 
   app.post('/api/host/login', (req, res) => {
     const result = auth.login(req.body?.password);
@@ -59,6 +59,11 @@ app.get('/api/version', (_req, res) => res.json({ version: '9' }));
 
   app.delete('/api/queue', requireHost, (_req, res) => {
     queue.clear();
+    res.status(204).end();
+  });
+
+  app.delete('/api/player', requireHost, async (_req, res) => {
+    await queue.clearCurrent();
     res.status(204).end();
   });
 
@@ -142,6 +147,11 @@ app.get('/api/version', (_req, res) => res.json({ version: '9' }));
     socket.on('player:skip', async () => {
       if (!isHostSocket(socket)) return;
       await queue.next();
+    });
+
+    socket.on('player:stop', async () => {
+      if (!isHostSocket(socket)) return;
+      await queue.clearCurrent();
     });
 
     socket.on('player:ended', async () => {
