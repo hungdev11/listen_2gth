@@ -33,29 +33,47 @@
   // === YouTube IFrame Player ===
   window.onYouTubeIframeAPIReady = function () {
     state.ytReady = true;
-    initPlayerIfHost();
+    // don't construct the player here — wait for first song so YT gets a real videoId
+    if (state.isHost && state.current && state.current.videoId) {
+      ensureHostPlayer(state.current.videoId);
+    }
   };
 
-  function initPlayerIfHost() {
-    if (!state.ytReady || !state.isHost || state.ytPlayer) return;
-    state.ytPlayer = new YT.Player('player-container', {
-      height: '1',
-      width: '1',
-      playerVars: {
-        autoplay: 0,
-        controls: 0,
-        disablekb: 1,
-        fs: 0,
-        modestbranding: 1,
-      },
-      events: {
-        onStateChange: (e) => {
-          if (e.data === YT.PlayerState.ENDED) {
-            socket.emit('player:ended');
-          }
+  function ensureHostPlayer(videoId) {
+    if (!state.ytReady || !state.isHost) return;
+    if (!state.ytPlayer) {
+      state.ytPlayer = new YT.Player('player-container', {
+        height: '1',
+        width: '1',
+        videoId,
+        playerVars: {
+          autoplay: 1,
+          controls: 0,
+          disablekb: 1,
+          fs: 0,
+          modestbranding: 1,
+          playsinline: 1,
+          origin: window.location.origin,
         },
-      },
-    });
+        events: {
+          onReady: () => {
+            state.ytPlayer.playVideo();
+          },
+          onStateChange: (e) => {
+            if (e.data === YT.PlayerState.ENDED) {
+              socket.emit('player:ended');
+            }
+          },
+        },
+      });
+      return;
+    }
+    // player exists; load new video if different
+    const url = state.ytPlayer.getVideoUrl();
+    if (!url || !url.includes(videoId)) {
+      state.ytPlayer.loadVideoById(videoId);
+      state.ytPlayer.playVideo();
+    }
   }
 
   // === Socket.IO ===
@@ -83,18 +101,12 @@
   socket.on('player:state', (current) => {
     state.current = current;
     renderNowPlaying();
-    if (state.isHost && state.ytPlayer && state.ytPlayer.loadVideoById) {
-      if (current && current.videoId) {
-        // host sync: if current video differs, load and play
-        const url = state.ytPlayer.getVideoUrl();
-        if (!url || !url.includes(current.videoId)) {
-          state.ytPlayer.loadVideoById(current.videoId);
-          state.ytPlayer.playVideo();
-        }
-      } else {
-        // no current — stop the host player
-        state.ytPlayer.stopVideo();
-      }
+    if (!state.isHost) return;
+    if (current && current.videoId) {
+      ensureHostPlayer(current.videoId);
+    } else if (state.ytPlayer && state.ytPlayer.stopVideo) {
+      // no current — stop the host player
+      state.ytPlayer.stopVideo();
     }
   });
 
@@ -119,6 +131,12 @@
     renderHostSection(snapshot.hostConnected);
     renderQueue();
     renderNowPlaying();
+    // sync host player if reconnecting with a song already in progress
+    if (state.isHost && state.current && state.current.videoId) {
+      ensureHostPlayer(state.current.videoId);
+    } else if (state.isHost && state.ytPlayer && state.ytPlayer.stopVideo) {
+      state.ytPlayer.stopVideo();
+    }
   }
 
   function renderHostSection(serverHostConnected) {
@@ -213,7 +231,10 @@
     socket.disconnect();
     socket.io.opts.auth = { token };
     socket.connect();
-    initPlayerIfHost();
+    // player will be initialized when state:sync arrives with a current song
+    if (state.ytReady && state.current && state.current.videoId) {
+      ensureHostPlayer(state.current.videoId);
+    }
   });
 
   els.btnSkip.addEventListener('click', () => {
