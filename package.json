@@ -1,0 +1,18 @@
+{
+  "name": "listen-2gth",
+  "version": "0.1.0",
+  "description": "Shared YouTube music queue with host-controlled playback",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
