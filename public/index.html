@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>listen_2gth</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app">
+    <header>
+      <h1>listen_2gth</h1>
+      <div id="connection-status" class="status connecting">Connecting…</div>
+    </header>
+
+    <section id="now-playing" class="card">
+      <div class="label">Now Playing</div>
+      <div id="now-playing-title">—</div>
+      <div id="now-playing-status" class="muted"></div>
+    </section>
+
+    <section id="host-controls" class="card hidden">
+      <div class="label">Host</div>
+      <div id="host-status">Not authenticated</div>
+      <form id="host-login-form">
+        <input type="password" id="host-password" placeholder="Host password" autocomplete="off">
+        <button type="submit">Login as host</button>
+      </form>
+      <div id="host-actions" class="hidden">
+        <button id="btn-skip">Skip</button>
+        <button id="btn-clear">Clear queue</button>
+        <div id="player-container"></div>
+      </div>
+    </section>
+
+    <section id="add-section" class="card">
+      <div class="label">Add to queue</div>
+      <form id="add-form">
+        <input type="text" id="youtube-url" placeholder="Paste YouTube link…" autocomplete="off" required>
+        <button type="submit">Add</button>
+      </form>
+      <div id="add-error" class="error"></div>
+    </section>
+
+    <section id="queue-section" class="card">
+      <div class="label">Queue (<span id="queue-count">0</span>)</div>
+      <ol id="queue-list"></ol>
+    </section>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://www.youtube.com/iframe_api"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  min-height: 100vh;
+}
+#app {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px;
+}
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+h1 { margin: 0; font-size: 24px; }
+.status {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+}
+.status.connecting { background: #f59e0b; color: #000; }
+.status.connected { background: #10b981; color: #000; }
+.status.disconnected { background: #ef4444; color: #fff; }
+.card {
+  background: #1e293b;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.label {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #94a3b8;
+  margin-bottom: 8px;
+}
+#now-playing-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  word-break: break-word;
+}
+.muted { color: #94a3b8; font-size: 14px; }
+.error { color: #ef4444; font-size: 14px; margin-top: 8px; min-height: 18px; }
+form {
+  display: flex;
+  gap: 8px;
+}
+input[type=text], input[type=password] {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #334155;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 6px;
+  font-size: 14px;
+}
+button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 14px;
+}
+button:hover { background: #2563eb; }
+#host-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+#btn-skip { background: #f59e0b; }
+#btn-skip:hover { background: #d97706; }
+#btn-clear { background: #ef4444; }
+#btn-clear:hover { background: #dc2626; }
+#player-container {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0.01;
+  pointer-events: none;
+  top: -9999px;
+}
+#queue-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+#queue-list li {
+  padding: 10px 0;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+#queue-list li:last-child { border-bottom: none; }
+.queue-title {
+  flex: 1;
+  word-break: break-word;
+}
+.queue-remove {
+  background: #ef4444;
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.host-only { display: none; }
+body.is-host .host-only { display: inline-block; }
+.hidden { display: none !important; }
+@media (max-width: 480px) {
+  h1 { font-size: 20px; }
+  .card { padding: 12px; }
+}
