@@ -21,12 +21,23 @@ HOST_PASSWORD=mật_khẩu_của_bạn npm start
 
 Ví dụ: `HOST_PASSWORD=12345 npm start`
 
-Server chạy ở `http://localhost:3000`. Để mọi người trong cùng mạng LAN cùng nghe, dùng IP máy của bạn (vd `http://192.168.1.10:3000`).
+Server chạy ở `http://localhost:3000`. Server sẽ in ra các URL LAN để mọi người trong cùng mạng cùng nghe, ví dụ:
+
+```
+listen_2gth server running at http://localhost:3000
+  → http://192.168.16.155:3000
+```
 
 Đổi port (mặc định 3000):
 
 ```bash
 HOST_PASSWORD=12345 PORT=8080 npm start
+```
+
+Bind trên một IP cụ thể (mặc định `0.0.0.0` — mọi interface):
+
+```bash
+HOST_PASSWORD=12345 HOST=127.0.0.1 npm start
 ```
 
 ## Đăng nhập host
@@ -41,7 +52,7 @@ Sau khi login, host có thêm:
 
 ## Mời mọi người tham gia
 
-Gửi URL trang (vd `http://192.168.1.10:3000`) cho mọi người. Họ mở URL, paste link YouTube vào ô "Paste YouTube link…" → bấm **Add**.
+Gửi URL LAN (server in ra khi khởi động, vd `http://192.168.16.155:3000`) cho mọi người trong cùng mạng. Họ mở URL, paste link YouTube vào ô "Paste YouTube link…" → bấm **Add**.
 
 Mọi người sẽ thấy queue đồng bộ real-time. Bài đang phát hiển thị "🔴 Đang phát: <tên bài>".
 
