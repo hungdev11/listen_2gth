@@ -83,12 +83,17 @@
   socket.on('player:state', (current) => {
     state.current = current;
     renderNowPlaying();
-    if (state.isHost && current && state.ytPlayer && state.ytPlayer.loadVideoById) {
-      // host sync: if current video differs, load and play
-      const url = state.ytPlayer.getVideoUrl();
-      if (!url || !url.includes(current.videoId)) {
-        state.ytPlayer.loadVideoById(current.videoId);
-        state.ytPlayer.playVideo();
+    if (state.isHost && state.ytPlayer && state.ytPlayer.loadVideoById) {
+      if (current && current.videoId) {
+        // host sync: if current video differs, load and play
+        const url = state.ytPlayer.getVideoUrl();
+        if (!url || !url.includes(current.videoId)) {
+          state.ytPlayer.loadVideoById(current.videoId);
+          state.ytPlayer.playVideo();
+        }
+      } else {
+        // no current — stop the host player
+        state.ytPlayer.stopVideo();
       }
     }
   });

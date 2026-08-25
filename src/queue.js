@@ -75,16 +75,25 @@ export function remove(id) {
   return { ok: true };
 }
 
-export function clear() {
+export async function clear() {
   ensureInit();
   cache.queue = [];
-  persist().catch((err) => console.error('persist failed', err));
+  cache.current = null;
+  await persist().catch((err) => console.error('persist failed', err));
   notify();
 }
 
 export async function next() {
   ensureInit();
-  if (cache.queue.length === 0) return null;
+  if (cache.queue.length === 0) {
+    // nothing to play next — stop current playback
+    if (cache.current) {
+      cache.current = null;
+      await persist().catch((err) => console.error('persist failed', err));
+      notify();
+    }
+    return null;
+  }
   const item = cache.queue.shift();
   cache.current = {
     videoId: item.videoId,

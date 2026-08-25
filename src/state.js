@@ -35,7 +35,7 @@ export async function save(state) {
   const dir = dataDir();
   await fs.mkdir(dir, { recursive: true });
   const file = stateFile();
-  const tmp = file + '.tmp';
+  const tmp = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`;
   await fs.writeFile(tmp, JSON.stringify(state, null, 2));
   await fs.rename(tmp, file);
 }
