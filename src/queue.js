@@ -103,6 +103,13 @@ export async function clearCurrent() {
   notify();
 }
 
+export async function setCurrent({ videoId, title, startedAt }) {
+  ensureInit();
+  cache.current = { videoId, title, startedAt: startedAt ?? Date.now() };
+  await persist();
+  notify();
+}
+
 export function setHostConnected(connected) {
   cache.hostConnected = connected;
   notify();
