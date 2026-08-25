@@ -25,7 +25,7 @@ export async function startServer() {
 
   app.get('/api/state', (_req, res) => res.json(queue.getSnapshot()));
 
-app.get('/api/version', (_req, res) => res.json({ version: '8' }));
+app.get('/api/version', (_req, res) => res.json({ version: '9' }));
 
   app.post('/api/host/login', (req, res) => {
     const result = auth.login(req.body?.password);

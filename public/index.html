@@ -37,6 +37,9 @@
         <button id="btn-skip">Skip</button>
         <button id="btn-clear">Clear queue</button>
         <div id="player-container"></div>
+        <div id="player-error" class="error hidden">
+          ⚠️ YouTube player could not load. Try disabling ad blocker / privacy extensions on this page, then <a href="#" id="reload-link">reload</a>.
+        </div>
       </div>
     </section>
 
@@ -57,6 +60,6 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="https://www.youtube.com/iframe_api"></script>
-  <script src="/app.js?v=8"></script>
+  <script src="/app.js?v=9"></script>
 </body>
 </html>

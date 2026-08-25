@@ -49,18 +49,68 @@
     current: null,
     ytPlayer: null,
     ytReady: false,
+    ytLoadFailed: false,
   };
 
   // === YouTube IFrame Player ===
+  // The YT IFrame API often gets blocked by ad blockers / privacy extensions
+  // (uBlock, Brave shields, Pi-hole, corporate firewalls). Detect that case
+  // and surface a clear error to the host instead of failing silently.
   window.onYouTubeIframeAPIReady = function () {
     state.ytReady = true;
-    // don't construct the player here — wait for first song so YT gets a real videoId
+    state.ytLoadFailed = false;
     if (state.isHost && state.current && state.current.videoId) {
       ensureHostPlayer(state.current.videoId);
     }
   };
 
+  // If the YT iframe_api script is blocked, `onYouTubeIframeAPIReady` never fires.
+  // After 5s with no YT global, show a visible error and offer a fallback
+  // iframe-based player (limited — no auto-advance, but at least plays audio).
+  setTimeout(() => {
+    if (state.ytReady || !state.isHost) return;
+    state.ytLoadFailed = true;
+    showPlayerError();
+    console.error('[player] YouTube iframe_api did not load — likely blocked by ad blocker or network policy');
+    // fall back to a plain iframe so audio still plays (no auto-advance though)
+    if (state.current && state.current.videoId) {
+      loadFallbackIframe(state.current.videoId);
+    }
+  }, 5000);
+
+  function showPlayerError() {
+    const el = document.getElementById('player-error');
+    if (el) el.classList.remove('hidden');
+  }
+
+  function hidePlayerError() {
+    const el = document.getElementById('player-error');
+    if (el) el.classList.add('hidden');
+  }
+
+  function loadFallbackIframe(videoId) {
+    const c = els.playerContainer;
+    c.innerHTML = '';
+    const iframe = document.createElement('iframe');
+    iframe.width = '320';
+    iframe.height = '180';
+    // youtube-nocookie is less often blocked than youtube.com
+    iframe.src = `https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&controls=1&modestbranding=1&playsinline=1`;
+    iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
+    iframe.setAttribute('frameborder', '0');
+    iframe.setAttribute('allowfullscreen', '');
+    c.classList.add('fallback-visible');
+    c.appendChild(iframe);
+    state.ytPlayer = null; // no JS control over fallback
+  }
+
   function ensureHostPlayer(videoId) {
+    hidePlayerError();
+    // if YT API failed to load, use fallback iframe for this song
+    if (state.ytLoadFailed && state.isHost) {
+      loadFallbackIframe(videoId);
+      return;
+    }
     if (!state.ytReady || !state.isHost) return;
     if (!state.ytPlayer) {
       state.ytPlayer = new YT.Player('player-container', {
@@ -79,6 +129,9 @@
         events: {
           onReady: () => {
             state.ytPlayer.playVideo();
+          },
+          onError: (e) => {
+            console.error('[player] YT error', e);
           },
           onStateChange: (e) => {
             if (e.data === YT.PlayerState.ENDED) {
@@ -256,6 +309,15 @@
     els.youtubeUrl.value = '';
     els.addError.textContent = '';
   });
+
+  // reload link inside player-error banner
+  const reloadLink = document.getElementById('reload-link');
+  if (reloadLink) {
+    reloadLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      location.reload();
+    });
+  }
 
   // === Host actions ===
   els.hostLoginForm.addEventListener('submit', async (e) => {
