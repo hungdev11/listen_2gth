@@ -26,7 +26,7 @@ export async function load() {
       hostConnected: Boolean(parsed.hostConnected),
     };
   } catch (err) {
-    if (err.code === 'ENOENT') return { ...DEFAULT_STATE };
+    if (err.code === 'ENOENT') return { queue: [], current: null, hostConnected: false };
     throw err;
   }
 }
