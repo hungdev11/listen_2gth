@@ -130,16 +130,27 @@ export async function startServer() {
     });
   });
 
-  const port = Number(process.env.PORT) || 3000;
-  await new Promise((resolve) => server.listen(port, resolve));
+  const port = process.env.PORT !== undefined ? Number(process.env.PORT) : 3000;
+  const host = process.env.HOST || '0.0.0.0';
+  await new Promise((resolve) => server.listen(port, host, resolve));
   return server;
 }
 
 const isMain = process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) {
-  startServer().then((server) => {
+  startServer().then(async (server) => {
     const port = server.address().port;
     console.log(`listen_2gth server running at http://localhost:${port}`);
+    // print LAN URLs so the host can share them
+    const { networkInterfaces } = await import('node:os');
+    for (const [name, addrs] of Object.entries(networkInterfaces())) {
+      for (const addr of addrs) {
+        if (addr.family === 'IPv4' && !addr.internal) {
+          console.log(`  → http://${addr.address}:${port}`);
+        }
+      }
+    }
+    console.log('Host password is set. Open the URL on other devices to join.');
   }).catch((err) => {
     console.error('Failed to start:', err.message);
     process.exit(1);
