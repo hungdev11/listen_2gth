@@ -1,6 +1,12 @@
-import { test } from 'node:test';
+import { test, afterEach } from 'node:test';
 import assert from 'node:assert';
-import { parseUrl } from '../src/youtube.js';
+import { parseUrl, fetchTitle } from '../src/youtube.js';
+
+const originalFetch = globalThis.fetch;
+
+afterEach(() => {
+  globalThis.fetch = originalFetch;
+});
 
 test('parses youtube.com/watch?v=ID', () => {
   assert.deepStrictEqual(
@@ -50,4 +56,32 @@ test('returns null for invalid URL', () => {
   assert.strictEqual(parseUrl('https://youtube.com/'), null);
   assert.strictEqual(parseUrl('https://www.youtube.com/watch?foo=bar'), null);
   assert.strictEqual(parseUrl('https://www.youtube.com/watch?v=short'), null);
+});
+
+test('fetchTitle returns title on ok response', async () => {
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({ title: 'X' }),
+  });
+  assert.strictEqual(await fetchTitle('dQw4w9WgXcQ'), 'X');
+});
+
+test('fetchTitle returns "Unknown title" when fetch throws', async () => {
+  globalThis.fetch = async () => {
+    throw new DOMException('Aborted', 'AbortError');
+  };
+  assert.strictEqual(await fetchTitle('dQw4w9WgXcQ'), 'Unknown title');
+});
+
+test('fetchTitle returns "Unknown title" when response is not ok', async () => {
+  globalThis.fetch = async () => ({ ok: false });
+  assert.strictEqual(await fetchTitle('dQw4w9WgXcQ'), 'Unknown title');
+});
+
+test('fetchTitle returns "Unknown title" when JSON has no title field', async () => {
+  globalThis.fetch = async () => ({
+    ok: true,
+    json: async () => ({}),
+  });
+  assert.strictEqual(await fetchTitle('dQw4w9WgXcQ'), 'Unknown title');
 });
