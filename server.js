@@ -34,6 +34,11 @@ export async function startServer() {
   app.post('/api/queue', requireHost, async (req, res) => {
     const result = await queue.addYoutubeUrl(req.body?.youtubeUrl);
     if (!result.ok) return res.status(400).json({ error: result.error });
+    // auto-play if nothing is currently playing
+    const snap = queue.getSnapshot();
+    if (!snap.current && snap.hostConnected) {
+      await queue.next();
+    }
     res.json({ item: result.item });
   });
 
@@ -87,6 +92,11 @@ export async function startServer() {
     socket.on('queue:add', async ({ youtubeUrl } = {}) => {
       const result = await queue.addYoutubeUrl(youtubeUrl);
       if (!result.ok) socket.emit('error', { event: 'queue:add', error: result.error });
+      // auto-play: if nothing is playing and a host is connected, start the head
+      const snap = queue.getSnapshot();
+      if (result.ok && !snap.current && snap.hostConnected) {
+        await queue.next();
+      }
     });
 
     socket.on('queue:remove', ({ id } = {}) => {
