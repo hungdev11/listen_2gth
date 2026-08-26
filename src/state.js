@@ -36,7 +36,10 @@ export async function save(state) {
   await fs.mkdir(dir, { recursive: true });
   const file = stateFile();
   const tmp = `${file}.${process.pid}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`;
-  await fs.writeFile(tmp, JSON.stringify(state, null, 2));
+  // Always persist hostConnected=false so a stale "true" from a crashed
+  // session can't hide the host login form on next restart.
+  const toPersist = { ...state, hostConnected: false };
+  await fs.writeFile(tmp, JSON.stringify(toPersist, null, 2));
   await fs.rename(tmp, file);
 }
 

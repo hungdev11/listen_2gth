@@ -6,7 +6,12 @@ const subscribers = new Set();
 let initialized = false;
 
 export async function init() {
-  cache = await state.load();
+  const loaded = await state.load();
+  // hostConnected reflects a live host socket — it must not survive a
+  // restart. If we honored the stored value, every freshly-restarted
+  // server would think a host is connected and hide the login form
+  // from guests until the host re-logs in.
+  cache = { ...loaded, hostConnected: false };
   initialized = true;
   notify();
 }

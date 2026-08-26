@@ -100,3 +100,33 @@ test('state persists across init', async () => {
   assert.strictEqual(queue.getQueue().length, 1);
   assert.strictEqual(queue.getQueue()[0].videoId, 'aaaaaaaaaaa');
 });
+
+test('init resets hostConnected even if persisted state says true', async () => {
+  // Simulate a stale state file left over from a previous run where a host
+  // was online when the server crashed. Without the fix in init(), every
+  // guest tab would see hostConnected=true and the host login form would
+  // stay hidden.
+  await fs.writeFile(
+    path.join(TEST_DIR, 'queue.json'),
+    JSON.stringify({ queue: [], current: null, hostConnected: true })
+  );
+  await queue.init();
+  assert.strictEqual(
+    queue.getSnapshot().hostConnected,
+    false,
+    'hostConnected must reset to false on init — no live host socket exists yet'
+  );
+});
+
+test('save does not persist hostConnected=true', async () => {
+  queue.setHostConnected(true);
+  await queue.addYoutubeUrl('https://youtu.be/aaaaaaaaaaa');
+  const onDisk = JSON.parse(
+    await fs.readFile(path.join(TEST_DIR, 'queue.json'), 'utf-8')
+  );
+  assert.strictEqual(
+    onDisk.hostConnected,
+    false,
+    'save() should always write hostConnected=false regardless of in-memory state'
+  );
+});
