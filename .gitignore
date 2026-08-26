@@ -2,3 +2,8 @@ node_modules/
 data/queue.json
 *.log
 .env
+
+# run-three.sh runtime artifacts
+.run-three.pids
+.run-three-logs/
+data-*/

@@ -1,24 +1,6 @@
 (function () {
   'use strict';
 
-  // === Self-reload if server has been updated since this script was loaded ===
-  // Prevents the "I clicked but nothing happens" failure mode where the user's
-  // browser has a stale app.js that no longer matches the server logic.
-  fetch('/api/version', { cache: 'no-store' })
-    .then((r) => r.json())
-    .then((d) => {
-      const scriptUrl = document.currentScript ? document.currentScript.src : '';
-      const m = scriptUrl.match(/[?&]v=(\d+)/);
-      const loadedVersion = m ? Number(m[1]) : 0;
-      if (loadedVersion !== Number(d.version)) {
-        // hard reload bypassing cache
-        const u = new URL(location.href);
-        u.searchParams.set('v', d.version);
-        location.replace(u.toString());
-      }
-    })
-    .catch(() => { /* ignore — offline or dev */ });
-
   const $ = (id) => document.getElementById(id);
   const els = {
     connectionStatus: $('connection-status'),

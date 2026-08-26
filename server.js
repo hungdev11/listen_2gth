@@ -30,8 +30,6 @@ export async function startServer() {
 
   app.get('/api/state', (_req, res) => res.json(queue.getSnapshot()));
 
-app.get('/api/version', (_req, res) => res.json({ version: '12' }));
-
   app.post('/api/host/login', (req, res) => {
     const result = auth.login(req.body?.password);
     if (!result.ok) return res.status(401).json({ error: 'Invalid password' });
