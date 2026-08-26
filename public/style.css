@@ -88,18 +88,9 @@ button.clicked { transform: scale(0.95); filter: brightness(1.4); }
   opacity: 0.01;
   pointer-events: none;
   top: -9999px;
-}
-/* When YT API fails we use a fallback iframe that's visible (320x180). */
-#player-container.fallback-visible {
-  position: relative;
-  width: 100%;
-  max-width: 320px;
-  height: auto;
-  aspect-ratio: 16 / 9;
-  opacity: 1;
-  pointer-events: auto;
-  top: auto;
-  margin: 8px 0;
+  /* Always hidden — host requested no iframe ever be visible, even the
+     fallback iframe when YT iframe_api is blocked. */
+  visibility: hidden;
 }
 #queue-list {
   list-style: none;

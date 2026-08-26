@@ -86,7 +86,6 @@
     iframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture');
     iframe.setAttribute('frameborder', '0');
     iframe.setAttribute('allowfullscreen', '');
-    c.classList.add('fallback-visible');
     c.appendChild(iframe);
     state.ytPlayer = null; // no JS control over fallback
   }
