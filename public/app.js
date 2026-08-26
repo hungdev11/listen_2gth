@@ -33,6 +33,11 @@
     ytPlayer: null,
     ytReady: false,
     ytLoadFailed: false,
+    // Track the videoId the YT player is currently loaded with so we only
+    // recreate the player on actual song changes (every state:sync would
+    // otherwise trigger a destroy+recreate and the new player never finishes
+    // loading before the next snapshot arrives).
+    lastPlayerVideoId: null,
   };
 
   // === YouTube IFrame Player ===
@@ -95,6 +100,14 @@
       return;
     }
     if (!state.ytReady || !state.isHost) return;
+    // Skip if the player is already on this videoId. Recreating on every
+    // snapshot keeps the new player from ever finishing initialization
+    // (no audio ever plays). Only recreate on actual song changes.
+    if (state.ytPlayer && state.lastPlayerVideoId === videoId) {
+      console.info('[player] already on', videoId, '— skip recreate');
+      return;
+    }
+    console.info('[player] load', videoId, '(was:', state.lastPlayerVideoId, ')');
     // Always destroy the existing player and recreate. loadVideoById on the
     // same YT instance keeps the old audio buffer playing for several
     // seconds (YT internal caching). Destroying + clearing the container
@@ -142,6 +155,7 @@
         },
       },
     });
+    state.lastPlayerVideoId = videoId;
   }
 
   // Poll YT for the current video's duration and send it to the server.
@@ -190,14 +204,17 @@
   });
 
   socket.on('player:state', (current) => {
+    const newVideoId = current && current.videoId;
+    console.info('[player:state]', newVideoId, 'last=', state.lastPlayerVideoId, 'hasPlayer=', !!state.ytPlayer);
     state.current = current;
     renderNowPlaying();
     if (!state.isHost) return;
-    if (current && current.videoId) {
-      ensureHostPlayer(current.videoId);
+    if (newVideoId) {
+      ensureHostPlayer(newVideoId);
     } else if (state.ytPlayer && state.ytPlayer.stopVideo) {
       // no current — stop the host player
       state.ytPlayer.stopVideo();
+      state.lastPlayerVideoId = null;
     }
   });
 
