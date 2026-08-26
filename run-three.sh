@@ -16,6 +16,7 @@ PORTS=(3000 3001 3002)
 PIDS_FILE="$ROOT/.run-three.pids"
 LOGS_DIR="$ROOT/.run-three-logs"
 mkdir -p "$LOGS_DIR"
+pass="123456"
 
 start() {
   if [ -f "$PIDS_FILE" ]; then
@@ -31,11 +32,11 @@ start() {
     mkdir -p "$data_dir"
     PORT="$port" \
     DATA_DIR="$data_dir" \
-    HOST_PASSWORD="pass$n" \
+    HOST_PASSWORD="${pass}" \
       node server.js >"$log_file" 2>&1 &
     pid=$!
     echo "$pid" >> "$PIDS_FILE"
-    echo "started instance $n on port $port (pid $pid, data=$data_dir, password=pass$n)"
+    echo "started instance $n on port $port (pid $pid, data=$data_dir, password=${pass})"
     echo "  → http://localhost:$port  (logs: $log_file)"
   done
   echo "All 3 instances running. Tail logs with: $0 logs"
