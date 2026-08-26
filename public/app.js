@@ -98,14 +98,14 @@
       return;
     }
     if (!state.ytReady || !state.isHost) return;
-    // Skip if the player is already on this videoId. Recreating on every
-    // snapshot keeps the new player from ever finishing initialization
-    // (no audio ever plays). Only recreate on actual song changes.
-    if (state.ytPlayer && state.lastPlayerVideoId === videoId) {
-      console.info('[player] already on', videoId, '— skip recreate');
-      return;
-    }
-    console.info('[player] load', videoId, '(was:', state.lastPlayerVideoId, ')');
+    forceLoadHostPlayer(videoId);
+  }
+
+  // Force-create a fresh YT player for videoId, bypassing the lastPlayerVideoId
+  // gate. Used by the player:state handler which only fires on real song
+  // changes from the server (skip / ended / auto-play).
+  function forceLoadHostPlayer(videoId) {
+    console.info('[player] force-load', videoId, '(was:', state.lastPlayerVideoId, ')');
     // Always destroy the existing player and recreate. loadVideoById on the
     // same YT instance keeps the old audio buffer playing for several
     // seconds (YT internal caching). Destroying + clearing the container
@@ -208,7 +208,12 @@
     renderNowPlaying();
     if (!state.isHost) return;
     if (newVideoId) {
-      ensureHostPlayer(newVideoId);
+      // Force reload on player:state because server only sends this when
+      // the *current* song changed (skip / ended / auto-play). The
+      // lastPlayerVideoId gate in ensureHostPlayer would otherwise keep the
+      // old audio if our local cache happened to match.
+      console.info('[player:state] force load', newVideoId);
+      forceLoadHostPlayer(newVideoId);
     } else if (state.ytPlayer && state.ytPlayer.stopVideo) {
       // no current — stop the host player
       state.ytPlayer.stopVideo();
