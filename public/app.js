@@ -284,6 +284,11 @@
       els.hostLoginForm.classList.add('hidden');
       els.hostActions.classList.remove('hidden');
       els.hostStatus.textContent = 'Authenticated';
+      // Show Skip only when something is playing; show Clear only when the
+      // queue has pending songs. Both buttons reflect what action is
+      // actually meaningful at the moment.
+      els.btnSkip.classList.toggle('hidden', !state.current);
+      els.btnClear.classList.toggle('hidden', state.queue.length === 0);
     } else if (serverHostConnected) {
       // another host is playing — hide the entire host card from guests
       els.hostControls.classList.add('hidden');
