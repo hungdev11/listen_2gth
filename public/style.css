@@ -79,8 +79,6 @@ button.clicked { transform: scale(0.95); filter: brightness(1.4); }
 }
 #btn-skip { background: #f59e0b; }
 #btn-skip:hover { background: #d97706; }
-#btn-stop { background: #64748b; }
-#btn-stop:hover { background: #475569; }
 #btn-clear { background: #ef4444; }
 #btn-clear:hover { background: #dc2626; }
 #player-container {

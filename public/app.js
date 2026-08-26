@@ -15,7 +15,6 @@
     hostPassword: $('host-password'),
     hostActions: $('host-actions'),
     btnSkip: $('btn-skip'),
-    btnStop: $('btn-stop'),
     btnClear: $('btn-clear'),
     playerContainer: $('player-container'),
     addForm: $('add-form'),
@@ -300,28 +299,8 @@
       return;
     }
     els.nowPlayingTitle.textContent = state.current.title || state.current.videoId;
-    const startedAt = state.current.startedAt || Date.now();
-    const duration = state.current.duration; // seconds, may be null
-    const elapsed = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
-    const m = Math.floor(elapsed / 60);
-    const s = elapsed % 60;
-    const ago = `Started ${m}:${String(s).padStart(2, '0')} ago`;
-
-    if (duration && duration > 0) {
-      const remaining = Math.max(0, duration - elapsed);
-      const rm = Math.floor(remaining / 60);
-      const rs = remaining % 60;
-      const endsAt = new Date(Date.now() + remaining * 1000);
-      const hh = String(endsAt.getHours()).padStart(2, '0');
-      const mm = String(endsAt.getMinutes()).padStart(2, '0');
-      els.nowPlayingStatus.textContent = `${ago} · ends in ${rm}:${String(rs).padStart(2, '0')} (${hh}:${mm})`;
-    } else {
-      els.nowPlayingStatus.textContent = ago;
-    }
+    els.nowPlayingStatus.textContent = '';
   }
-
-  // re-render countdown every second
-  setInterval(() => { if (state.current) renderNowPlaying(); }, 1000);
 
   function renderQueue() {
     els.queueCount.textContent = state.queue.length;
@@ -406,12 +385,6 @@
     if (!state.isHost) return;
     flash(e.currentTarget);
     socket.emit('player:skip');
-  });
-
-  els.btnStop.addEventListener('click', (e) => {
-    if (!state.isHost) return;
-    flash(e.currentTarget);
-    socket.emit('player:stop');
   });
 
   els.btnClear.addEventListener('click', (e) => {
