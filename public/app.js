@@ -95,51 +95,53 @@
       return;
     }
     if (!state.ytReady || !state.isHost) return;
-    if (!state.ytPlayer) {
-      state.ytPlayer = new YT.Player('player-container', {
-        height: '1',
-        width: '1',
-        videoId,
-        playerVars: {
-          autoplay: 1,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          playsinline: 1,
-          origin: window.location.origin,
+    // Always destroy the existing player and recreate. loadVideoById on the
+    // same YT instance keeps the old audio buffer playing for several
+    // seconds (YT internal caching). Destroying + clearing the container
+    // guarantees the old stream stops before the new one starts.
+    if (state.ytPlayer) {
+      try {
+        state.ytPlayer.destroy();
+      } catch (err) {
+        console.warn('[player] destroy failed', err);
+      }
+      state.ytPlayer = null;
+      els.playerContainer.innerHTML = '';
+    }
+    state.ytPlayer = new YT.Player('player-container', {
+      height: '1',
+      width: '1',
+      videoId,
+      playerVars: {
+        autoplay: 1,
+        controls: 0,
+        disablekb: 1,
+        fs: 0,
+        modestbranding: 1,
+        playsinline: 1,
+        origin: window.location.origin,
+      },
+      events: {
+        onReady: () => {
+          state.ytPlayer.playVideo();
+          // YT loads duration metadata after the video starts buffering.
+          // Poll a few times to capture it then notify server.
+          captureDuration();
         },
-        events: {
-          onReady: () => {
-            state.ytPlayer.playVideo();
-            // YT loads duration metadata after the video starts buffering.
-            // Poll a few times to capture it then notify server.
+        onError: (e) => {
+          console.error('[player] YT error', e);
+        },
+        onStateChange: (e) => {
+          if (e.data === YT.PlayerState.ENDED) {
+            socket.emit('player:ended');
+          }
+          // onStateChange fires when buffering finishes — re-check duration
+          if (e.data === YT.PlayerState.PLAYING) {
             captureDuration();
-          },
-          onError: (e) => {
-            console.error('[player] YT error', e);
-          },
-          onStateChange: (e) => {
-            if (e.data === YT.PlayerState.ENDED) {
-              socket.emit('player:ended');
-            }
-            // onStateChange fires when buffering finishes — re-check duration
-            if (e.data === YT.PlayerState.PLAYING) {
-              captureDuration();
-            }
-          },
+          }
         },
-      });
-      return;
-    }
-    // player exists; load new video if different
-    const url = state.ytPlayer.getVideoUrl();
-    if (!url || !url.includes(videoId)) {
-      state.ytPlayer.loadVideoById(videoId);
-      state.ytPlayer.playVideo();
-      // new video — capture its duration once available
-      captureDuration();
-    }
+      },
+    });
   }
 
   // Poll YT for the current video's duration and send it to the server.
