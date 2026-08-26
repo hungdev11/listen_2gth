@@ -244,12 +244,11 @@
     renderRole(snapshot.hostConnected);
     renderQueue();
     renderNowPlaying();
-    // sync host player if reconnecting with a song already in progress
-    if (state.isHost && state.current && state.current.videoId) {
-      ensureHostPlayer(state.current.videoId);
-    } else if (state.isHost && state.ytPlayer && state.ytPlayer.stopVideo) {
-      state.ytPlayer.stopVideo();
-    }
+    // Note: don't load/stop the YT player here. The separate player:state
+    // event is the authoritative signal for song changes (skip / ended /
+    // auto-play) and handles loading the host player. Loading here too
+    // causes a destroy+recreate per snapshot → player never finishes
+    // initializing → infinite recursion in the logs.
   }
 
   function renderRole(serverHostConnected) {
