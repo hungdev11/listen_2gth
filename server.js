@@ -85,15 +85,30 @@ export async function startServer() {
   }
 
   // Queue change notifications
+  // Cache the last broadcast player state so we only emit player:state when
+// it actually changes. Without this, every queue mutation (e.g. adding a
+// song while the host is mid-play) re-broadcasts player:state and forces
+// the host tab to destroy+recreate its YT player on every snapshot.
+let lastBroadcastCurrent = null;
   queue.subscribe((snapshot) => {
     io.emit('state:sync', snapshot);
     io.emit('queue:update', { queue: snapshot.queue });
-    io.emit('player:state', snapshot.current ? {
-      videoId: snapshot.current.videoId,
-      title: snapshot.current.title,
-      startedAt: snapshot.current.startedAt,
-      duration: snapshot.current.duration ?? null,
-    } : null);
+    const cur = snapshot.current;
+    const last = lastBroadcastCurrent;
+    const changed =
+      (cur === null) !== (last === null) ||
+      (cur && last && (cur.videoId !== last.videoId || cur.startedAt !== last.startedAt)) ||
+      (cur && !last) ||
+      (!cur && last);
+    if (changed) {
+      lastBroadcastCurrent = cur ? { ...cur } : null;
+      io.emit('player:state', cur ? {
+        videoId: cur.videoId,
+        title: cur.title,
+        startedAt: cur.startedAt,
+        duration: cur.duration ?? null,
+      } : null);
+    }
   });
 
   io.on('connection', (socket) => {
